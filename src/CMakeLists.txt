@@ -155,12 +155,13 @@ if (GLFW_BUILD_OS4)
     if (CLIB4)
         target_compile_options(glfw PRIVATE "-DGL4ES" "-gstabs")
         target_link_libraries(glfw PRIVATE "-lGL")
+	target_link_options(glfw INTERFACE -athread=single)
     else()
         target_compile_options(glfw PRIVATE "-DGL4ES" "-gstabs" "-DNEWLIB")
-        target_link_libraries(glfw PRIVATE "-lgl4es -ldl")
+        target_link_libraries(glfw PRIVATE -lgl4es -ldl)
+	target_link_options(glfw INTERFACE -athread=single -use-dynld)
     endif()
 endif()
-
 if (GLFW_BUILD_COCOA)
     target_link_libraries(glfw PRIVATE "-framework Cocoa"
                                        "-framework IOKit"
