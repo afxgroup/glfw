@@ -36,7 +36,9 @@ const int optional_argument = 2;
 char* optarg;
 int optopt;
 /* The variable optind [...] shall be initialized to 1 by the system. */
+#ifndef NEWLIB
 int optind = 1;
+#endif
 int opterr;
 
 static char* optcursor = NULL;

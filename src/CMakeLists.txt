@@ -15,6 +15,9 @@ if (APPLE)
 elseif (WIN32)
     target_sources(glfw PRIVATE win32_time.h win32_thread.h win32_module.c
                                 win32_time.c win32_thread.c)
+elseif(AMIGAOS4)
+    target_sources(glfw PRIVATE posix_time.h posix_thread.h
+                                posix_time.c posix_thread.c)
 else()
     target_sources(glfw PRIVATE posix_time.h posix_thread.h posix_module.c
                                 posix_time.c posix_thread.c)
@@ -66,7 +69,7 @@ endif()
 
 if (GLFW_BUILD_OS4)
     target_compile_definitions(glfw PRIVATE _GLFW_OS4)
-    target_sources(glfw PRIVATE os4_init.c os4_window.c os4_monitor.c os4_context.c os4_joystick.c)
+    target_sources(glfw PRIVATE os4_init.c os4_window.c os4_monitor.c os4_context.c os4_joystick.c dummy_module.c)
 endif()
 
 if (GLFW_BUILD_WAYLAND)
@@ -153,14 +156,15 @@ endif()
 
 if (GLFW_BUILD_OS4)
     if (CLIB4)
-        target_compile_options(glfw PRIVATE "-DGL4ES" "-gstabs")
+        target_compile_options(glfw PRIVATE -mcrt=clib4 -DGL4ES -gstabs)
         target_link_libraries(glfw PRIVATE "-lGL")
+	target_link_options(glfw INTERFACE -athread=native -mcrt=clib4)
     else()
         target_compile_options(glfw PRIVATE "-DGL4ES" "-gstabs" "-DNEWLIB")
-        target_link_libraries(glfw PRIVATE "-lgl4es -ldl")
+        target_link_libraries(glfw PRIVATE -lgl4es)
+	target_link_options(glfw INTERFACE -athread=native)
     endif()
 endif()
-
 if (GLFW_BUILD_COCOA)
     target_link_libraries(glfw PRIVATE "-framework Cocoa"
                                        "-framework IOKit"

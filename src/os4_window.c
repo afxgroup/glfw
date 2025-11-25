@@ -926,6 +926,7 @@ void _glfwPollEventsOS4(void)
                 break;
 
             case IDCMP_RAWKEY:
+            {
                 uint8_t rawkey = msg.Code & 0x7F;
                 dprintf("RAWKEY = 0x%x\n", rawkey);
                 int key = _glfw.os4.keycodes[rawkey];
@@ -957,8 +958,10 @@ void _glfwPollEventsOS4(void)
                     _glfwInputKey(window, key, rawkey, GLFW_RELEASE, mods);                          
                 }
                 break;
+            }
 
             case IDCMP_MOUSEBUTTONS:
+            {
                 int button = OS4_GetButton(imsg->Code);
                 int state = OS4_GetButtonState(imsg->Code);
                 int bmods = OS4_TranslateState(msg.Qualifier);
@@ -968,8 +971,10 @@ void _glfwPollEventsOS4(void)
                                      state,
                                      bmods);
                 break;
+            }
 
             case IDCMP_EXTENDEDMOUSE:
+            {
                 struct IntuiWheelData *data = (struct IntuiWheelData *)msg.Gadget;
                 if (data->WheelY < 0) {
                     _glfwInputScroll(window, 0.0, 1.0);
@@ -983,7 +988,7 @@ void _glfwPollEventsOS4(void)
                     _glfwInputScroll(window, -1.0, 0.0);
                 }
                 break;
-
+            }
             case IDCMP_NEWSIZE:
                 if (window != NULL) {
                     window->os4.width = msg.Width;
