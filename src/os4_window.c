@@ -997,11 +997,25 @@ void _glfwPollEventsOS4(void)
             }
             case IDCMP_NEWSIZE:
                 if (window != NULL) {
-                    window->os4.width = msg.Width;
-                    window->os4.height = msg.Height;
+                    int innerWidth = msg.Width;
+                    int innerHeight = msg.Height;
+
+                    // Ask Intuition for the definitive inner size, as the
+                    // sizing gadget may have clamped what we were told.
+                    OS4_GetWindowSize(window->os4.handle, &innerWidth, &innerHeight);
+
+                    window->os4.width = innerWidth;
+                    window->os4.height = innerHeight;
+
+                    // The drawable has to follow the window before the
+                    // application redraws into it.
+                    if (window->context.gl.glContext) {
+                        _glfwResizeContextGL(window);
+                    }
+
+                    _glfwInputWindowSize(window, innerWidth, innerHeight);
+                    _glfwInputFramebufferSize(window, innerWidth, innerHeight);
                 }
-                _glfwInputWindowSize(window, msg.Width, msg.Height);
-                //OS4_HandleResize(_this, &msg);
                 break;
 
             case IDCMP_CHANGEWINDOW:
