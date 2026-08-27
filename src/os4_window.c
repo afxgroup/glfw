@@ -135,11 +135,10 @@ OS4_ResizeWindow(_GLFWwindow* window, int width, int height, int posx, int posy)
         }
 
         OS4_WaitForResize(window, NULL, NULL);
-#if 0
-        if (window->os4.glwindow->context.gl.glContext) {
-            OS4_ResizeGlContext(window);
+
+        if (window->context.gl.glContext) {
+            _glfwResizeContextGL(window);
         }
-#endif        
     } else {
         dprintf("Invalid width %d or height %d\n", width, height);
     }
@@ -369,7 +368,8 @@ static void updateCursorImage(_GLFWwindow* window, _GLFWcursor* cursor)
 static int createNativeWindow(_GLFWwindow* window,
                               const _GLFWwndconfig* wndconfig,
                               const _GLFWfbconfig* fbconfig,
-                              int windowType)
+                              int windowType,
+                            const char *title)
 {
     window->autoIconify = GLFW_FALSE;
     if (window->monitor) {
@@ -381,7 +381,7 @@ static int createNativeWindow(_GLFWwindow* window,
             SA_Depth,       data->depth,
             SA_DisplayID,   data->modeid,
             SA_Quiet,       TRUE,
-            SA_Title,       wndconfig->title,
+            SA_Title,       title,
             SA_ShowTitle,   FALSE,
             SA_LikeWorkbench, TRUE,
             SA_Compositing, FALSE,
@@ -431,8 +431,8 @@ static int createNativeWindow(_GLFWwindow* window,
             WA_Top,               box.Top,
             WA_InnerWidth,        box.Width,
             WA_InnerHeight,       box.Height,
-            WA_Title,             window->os4.fullscreen ? NULL: wndconfig->title,
-            WA_ScreenTitle,       wndconfig->title,
+            WA_Title,             window->os4.fullscreen ? NULL: title,
+            WA_ScreenTitle,       title,
             WA_MaxWidth,          _glfw.os4.publicScreen->Width,
             WA_MaxHeight,         _glfw.os4.publicScreen->Height,
             WA_Flags,             windowFlags,
@@ -445,7 +445,7 @@ static int createNativeWindow(_GLFWwindow* window,
 
     /* If we have a valid handle return GLFW_TRUE */
     if (window->os4.handle) {
-        window->os4.title = _glfw_strdup(wndconfig->title);
+        window->os4.title = _glfw_strdup(title);
         window->maxwidth = _glfw.os4.publicScreen->Width;
         window->maxheight = _glfw.os4.publicScreen->Height;
 
@@ -486,7 +486,7 @@ int _glfwCreateWindowOS4(_GLFWwindow* window,
 {
     dprintf("_glfwCreateWindowOS4 enter\n");
 
-    if (!createNativeWindow(window, wndconfig, fbconfig, ctxconfig->client)) {
+    if (!createNativeWindow(window, wndconfig, fbconfig, ctxconfig->client, window->title)) {
         dprintf("Cannot create native window\n");
         return GLFW_FALSE;
     }
@@ -532,9 +532,13 @@ void _glfwDestroyWindowOS4(_GLFWwindow* window)
         window->context.destroy(window);
 
     if (window->os4.handle != NULL) {
-        IIntuition->CloseWindow(window->os4.handle);
-
+        // The screen has to be read before the window is closed, as the
+        // Window structure is gone once CloseWindow() returns.
         struct Screen *screen = window->os4.handle->WScreen;
+
+        IIntuition->CloseWindow(window->os4.handle);
+        window->os4.handle = NULL;
+
         if (screen)
             OS4_CloseScreen(screen);
     }

@@ -152,12 +152,14 @@ if (GLFW_BUILD_WIN32)
 endif()
 
 if (GLFW_BUILD_OS4)
+    # The gl* entry points come from libGL.a (desktop) / libGLESv2.a (ES);
+    # the native lifecycle calls come from mesa.library through IMesa.
     if (CLIB4)
-        target_compile_options(glfw PRIVATE "-DGL4ES" "-gstabs")
+        target_compile_options(glfw PRIVATE "-gstabs")
         target_link_libraries(glfw PRIVATE "-lGL")
     else()
-        target_compile_options(glfw PRIVATE "-DGL4ES" "-gstabs" "-DNEWLIB")
-        target_link_libraries(glfw PRIVATE "-lgl4es -ldl")
+        target_compile_options(glfw PRIVATE "-gstabs" "-DNEWLIB")
+        target_link_libraries(glfw PRIVATE "-lGL" "-ldl")
     endif()
 endif()
 
