@@ -66,6 +66,9 @@ struct Library *IconBase = NULL;
 struct WorkbenchIFace *IWorkbench = NULL;
 struct Library *WorkbenchBase = NULL;
 
+struct Library *MesaBase = NULL;
+struct MesaIFace *IMesa = NULL;
+
 #define MIN_LIB_VERSION 51
 
 static void OS4_FindApplicationName();
@@ -158,6 +161,13 @@ static int loadLibraries(void)
     // intuition.library
     IntuitionBase = openLib("intuition.library", MIN_LIB_VERSION, (struct Interface **)&IIntuition);
     if (!IntuitionBase)
+    {
+        return 0;
+    }
+
+    // mesa.library
+    MesaBase = openLib("mesa.library", 1, (struct Interface **)&IMesa);
+    if (!MesaBase)
     {
         return 0;
     }
@@ -267,6 +277,16 @@ static void closeLibraries(void)
         IntuitionBase = NULL;
     }
 
+    if (IMesa)
+    {
+        IExec->DropInterface((struct Interface *)IMesa);
+        IMesa = NULL;
+    }
+    if (MesaBase)
+    {
+        IExec->CloseLibrary(MesaBase);
+        MesaBase = NULL;
+    }
     // Close keymap.library
     if (IKeymap)
     {
@@ -628,6 +648,7 @@ GLFWbool _glfwConnectOS4(int platformID, _GLFWplatform *platform)
 
 int _glfwInitOS4(void)
 {
+    memset(&_glfw.os4, 0, sizeof(_glfw.os4));
     loadLibraries();
     createKeyTables();
 

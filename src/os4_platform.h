@@ -38,6 +38,7 @@
 #include <proto/wb.h>
 #include <proto/requester.h>
 #include <proto/textclip.h>
+#include <proto/mesa.h>
 
 #include <exec/exec.h>
 #include <dos/dos.h>
@@ -148,7 +149,9 @@ typedef struct _GLFWwindowOS4
 
 typedef struct _GLFWcontextGL {
     struct BitMap  *bm;
-    void*           glContext;
+    MesaContext     glContext;
+    MesaDrawable    drawable;
+    struct Window  *drawableWindow;
     BOOL            vsyncEnabled;
 } _GLFWcontextGL;
 
@@ -270,6 +273,7 @@ void _glfwGetRequiredInstanceExtensionsOS4(char** extensions);
 int _glfwGetPhysicalDevicePresentationSupportOS4(VkInstance instance, VkPhysicalDevice device, uint32_t queuefamily);
 VkResult _glfwCreateWindowSurfaceOS4(VkInstance instance, _GLFWwindow* window, const VkAllocationCallbacks* allocator, VkSurfaceKHR* surface);
 GLFWbool _glfwCreateContextGL(_GLFWwindow* window, const _GLFWctxconfig* ctxconfig, const _GLFWfbconfig* fbconfig);
+GLFWbool _glfwResizeContextGL(_GLFWwindow* window);
 
 EGLenum _glfwGetEGLPlatformOS4(EGLint** attribs);
 EGLNativeDisplayType _glfwGetEGLNativeDisplayOS4(void);

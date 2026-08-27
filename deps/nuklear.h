@@ -441,6 +441,11 @@ NK_STATIC_ASSERT(sizeof(nk_bool) == sizeof(bool));
 NK_STATIC_ASSERT(sizeof(nk_bool) >= 2);
 #endif
 
+#if defined(_MSC_VER)
+/* disable `operands are different enum types` warning on MSVC */ 
+#pragma warning( disable: 5287 )
+#endif
+
 /* ============================================================================
  *
  *                                  API
