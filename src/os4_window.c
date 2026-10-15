@@ -149,7 +149,7 @@ OS4_GetIDCMPFlags(_GLFWwindow* window, GLFWbool fullscreen)
 {
     uint32 IDCMPFlags = IDCMP_MOUSEBUTTONS | IDCMP_MOUSEMOVE
                       | IDCMP_DELTAMOVE | IDCMP_RAWKEY | IDCMP_ACTIVEWINDOW
-                      | IDCMP_INACTIVEWINDOW | IDCMP_INTUITICKS
+                      | IDCMP_INACTIVEWINDOW
                       | IDCMP_EXTENDEDMOUSE;
 
     dprintf("Called\n");
@@ -1090,13 +1090,94 @@ void _glfwPollEventsOS4(void)
     }
 }
 
+// Timer request used to bound a wait in _glfwWaitEventsTimeoutOS4. It is opened
+// on first use and closed by _glfwCloseWaitTimerOS4 when GLFW terminates.
+static struct MsgPort *waitTimerPort = NULL;
+static struct TimeRequest *waitTimerRequest = NULL;
+
+static GLFWbool openWaitTimer(void)
+{
+    if (waitTimerRequest)
+        return GLFW_TRUE;
+
+    if (!waitTimerPort)
+        waitTimerPort = IExec->CreateMsgPort();
+    if (!waitTimerPort)
+        return GLFW_FALSE;
+
+    waitTimerRequest = (struct TimeRequest *) IExec->CreateIORequest(waitTimerPort, sizeof(struct TimeRequest));
+    if (!waitTimerRequest)
+        return GLFW_FALSE;
+
+    if (IExec->OpenDevice("timer.device", UNIT_MICROHZ, (struct IORequest *) waitTimerRequest, 0) != 0)
+    {
+        IExec->DeleteIORequest((struct IORequest *) waitTimerRequest);
+        waitTimerRequest = NULL;
+        return GLFW_FALSE;
+    }
+
+    return GLFW_TRUE;
+}
+
+void _glfwCloseWaitTimerOS4(void)
+{
+    if (waitTimerRequest)
+    {
+        IExec->CloseDevice((struct IORequest *) waitTimerRequest);
+        IExec->DeleteIORequest((struct IORequest *) waitTimerRequest);
+        waitTimerRequest = NULL;
+    }
+    if (waitTimerPort)
+    {
+        IExec->DeleteMsgPort(waitTimerPort);
+        waitTimerPort = NULL;
+    }
+}
+
+// Blocks until a message reaches the user port. GetMsg clears the port's signal
+// once the port is empty, so a message that arrives during the poll is not lost.
 void _glfwWaitEventsOS4(void)
 {
+    if (!_glfw.os4.userPort)
+        return;
+
+    IExec->Wait(1UL << _glfw.os4.userPort->mp_SigBit);
     _glfwPollEventsOS4();
 }
 
+// Blocks until either a window event arrives or the timeout (in seconds) expires.
 void _glfwWaitEventsTimeoutOS4(double timeout)
 {
+    // Clamped so the seconds fit the ULONG of a TimeVal.
+    if (timeout > 3600.0)
+        timeout = 3600.0;
+
+    if (timeout <= 0.0 || !_glfw.os4.userPort || !openWaitTimer())
+    {
+        _glfwPollEventsOS4();
+        return;
+    }
+
+    waitTimerRequest->Request.io_Command = TR_ADDREQUEST;
+    waitTimerRequest->Time.Seconds = (ULONG) timeout;
+    waitTimerRequest->Time.Microseconds =
+        (ULONG) ((timeout - (double) waitTimerRequest->Time.Seconds) * 1000000.0);
+    IExec->SendIO((struct IORequest *) waitTimerRequest);
+
+    IExec->Wait((1UL << waitTimerPort->mp_SigBit) | (1UL << _glfw.os4.userPort->mp_SigBit));
+
+    // Cancel the timer if an event woke us first, and wait for the abort reply.
+    // After an abort the timer port's signal can stay set with no message behind
+    // it, so clear it explicitly; otherwise the next wait returns at once.
+    if (!IExec->CheckIO((struct IORequest *) waitTimerRequest)) {
+        IExec->AbortIO((struct IORequest *) waitTimerRequest);
+        IExec->WaitPort(waitTimerPort);
+    }
+    IExec->WaitIO((struct IORequest *) waitTimerRequest);
+    while (IExec->GetMsg(waitTimerPort))
+        ;
+    IExec->SetSignal(0, 1UL << waitTimerPort->mp_SigBit);
+
     _glfwPollEventsOS4();
 }
 

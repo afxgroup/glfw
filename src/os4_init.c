@@ -669,6 +669,8 @@ int _glfwInitOS4(void)
 
 void _glfwTerminateOS4(void)
 {
+    _glfwCloseWaitTimerOS4();
+
     if (_glfw.os4.appMsgPort) {
         struct Message *msg;
 
