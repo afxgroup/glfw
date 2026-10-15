@@ -256,6 +256,7 @@ int _glfwWindowVisibleOS4(_GLFWwindow* window);
 void _glfwPollEventsOS4(void);
 void _glfwWaitEventsOS4(void);
 void _glfwWaitEventsTimeoutOS4(double timeout);
+void _glfwCloseWaitTimerOS4(void);
 void _glfwPostEmptyEventOS4(void);
 void _glfwGetCursorPosOS4(_GLFWwindow* window, double* xpos, double* ypos);
 void _glfwSetCursorPosOS4(_GLFWwindow* window, double x, double y);
