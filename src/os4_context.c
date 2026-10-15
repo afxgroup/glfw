@@ -133,10 +133,14 @@ static GLFWbool createDrawable(_GLFWwindow* window,
             drawableTags[count].ti_Data = (ULONG) fbconfig->alphaBits;
             count++;
         }
+        // GLFW treats depthBits as a minimum. mesa.library rejects depth
+        // buffers shorter than 24 bits (it does not approximate), so ask for 24.
         if (fbconfig->depthBits != GLFW_DONT_CARE && fbconfig->depthBits > 0)
         {
+            const int depthBits = fbconfig->depthBits < 24 ? 24 : fbconfig->depthBits;
+
             drawableTags[count].ti_Tag  = MESA_DRAWABLE_DEPTH_BITS;
-            drawableTags[count].ti_Data = (ULONG) fbconfig->depthBits;
+            drawableTags[count].ti_Data = (ULONG) depthBits;
             count++;
         }
         if (fbconfig->stencilBits != GLFW_DONT_CARE && fbconfig->stencilBits > 0)
