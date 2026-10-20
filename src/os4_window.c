@@ -149,7 +149,7 @@ OS4_GetIDCMPFlags(_GLFWwindow* window, GLFWbool fullscreen)
 {
     uint32 IDCMPFlags = IDCMP_MOUSEBUTTONS | IDCMP_MOUSEMOVE
                       | IDCMP_DELTAMOVE | IDCMP_RAWKEY | IDCMP_ACTIVEWINDOW
-                      | IDCMP_INACTIVEWINDOW
+                      | IDCMP_INACTIVEWINDOW | IDCMP_REFRESHWINDOW
                       | IDCMP_EXTENDEDMOUSE;
 
     dprintf("Called\n");
@@ -1055,6 +1055,16 @@ void _glfwPollEventsOS4(void)
                     _glfwInputWindowCloseRequest(window);
                 }
 
+                break;
+
+            case IDCMP_REFRESHWINDOW:
+                // The window was uncovered: finish Intuition's refresh, and report the
+                // window as damaged so that the application draws it again.
+                if (window) {
+                    IIntuition->BeginRefresh(window->os4.handle);
+                    IIntuition->EndRefresh(window->os4.handle, TRUE);
+                    _glfwInputWindowDamage(window);
+                }
                 break;
 
             case IDCMP_INTUITICKS:
