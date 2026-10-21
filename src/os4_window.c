@@ -149,7 +149,7 @@ OS4_GetIDCMPFlags(_GLFWwindow* window, GLFWbool fullscreen)
 {
     uint32 IDCMPFlags = IDCMP_MOUSEBUTTONS | IDCMP_MOUSEMOVE
                       | IDCMP_DELTAMOVE | IDCMP_RAWKEY | IDCMP_ACTIVEWINDOW
-                      | IDCMP_INACTIVEWINDOW
+                      | IDCMP_INACTIVEWINDOW | IDCMP_REFRESHWINDOW
                       | IDCMP_EXTENDEDMOUSE;
 
     dprintf("Called\n");
@@ -450,7 +450,9 @@ static int createNativeWindow(_GLFWwindow* window,
         window->maxheight = _glfw.os4.publicScreen->Height;
 
         _glfwGetWindowPosOS4(window, &window->os4.xpos, &window->os4.ypos);
-        _glfwGetWindowSizeOS4(window, &window->os4.width, &window->os4.height);        
+        // Intuition may open the window smaller than asked, when the screen is too small for it:
+        // the size GLFW reports, and the drawing follows, is the inner area Intuition gave.
+        OS4_GetWindowSize(window->os4.handle, &window->os4.width, &window->os4.height);
         window->os4.oldxpos = window->os4.xpos;
         window->os4.oldypos = window->os4.ypos;
 
@@ -693,28 +695,26 @@ void _glfwGetWindowFrameSizeOS4(_GLFWwindow* window,
                                  int* left, int* top,
                                  int* right, int* bottom)
 {
-    if (window->os4.decorated && !window->monitor)
+    // The frame is what the screen's theme draws around the inner area, so it is read from the
+    // Intuition window and not assumed: a theme can have a title bar of any height.
+    int frameLeft = 0, frameTop = 0, frameRight = 0, frameBottom = 0;
+    if (window->os4.decorated && !window->monitor && window->os4.handle)
     {
-        if (left)
-            *left = 1;
-        if (top)
-            *top = 10;
-        if (right)
-            *right = 1;
-        if (bottom)
-            *bottom = 1;
+        struct Window * syswin = window->os4.handle;
+        frameLeft = syswin->BorderLeft;
+        frameTop = syswin->BorderTop;
+        frameRight = syswin->BorderRight;
+        frameBottom = syswin->BorderBottom;
     }
-    else
-    {
-        if (left)
-            *left = 0;
-        if (top)
-            *top = 0;
-        if (right)
-            *right = 0;
-        if (bottom)
-            *bottom = 0;
-    }
+
+    if (left)
+        *left = frameLeft;
+    if (top)
+        *top = frameTop;
+    if (right)
+        *right = frameRight;
+    if (bottom)
+        *bottom = frameBottom;
 }
 
 void _glfwGetWindowContentScaleOS4(_GLFWwindow* window, float* xscale, float* yscale)
@@ -1055,6 +1055,16 @@ void _glfwPollEventsOS4(void)
                     _glfwInputWindowCloseRequest(window);
                 }
 
+                break;
+
+            case IDCMP_REFRESHWINDOW:
+                // The window was uncovered: finish Intuition's refresh, and report the
+                // window as damaged so that the application draws it again.
+                if (window) {
+                    IIntuition->BeginRefresh(window->os4.handle);
+                    IIntuition->EndRefresh(window->os4.handle, TRUE);
+                    _glfwInputWindowDamage(window);
+                }
                 break;
 
             case IDCMP_INTUITICKS:
