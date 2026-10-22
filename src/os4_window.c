@@ -453,6 +453,10 @@ static int createNativeWindow(_GLFWwindow* window,
         // Intuition may open the window smaller than asked, when the screen is too small for it:
         // the size GLFW reports, and the drawing follows, is the inner area Intuition gave.
         OS4_GetWindowSize(window->os4.handle, &window->os4.width, &window->os4.height);
+        // Without limits Intuition keeps the window from shrinking below the size it was opened
+        // with; the limits GLFW knows (none unless the app sets them) are the ones to enforce.
+        if (!window->os4.fullscreen)
+            OS4_SetWindowLimits(window);
         window->os4.oldxpos = window->os4.xpos;
         window->os4.oldypos = window->os4.ypos;
 
